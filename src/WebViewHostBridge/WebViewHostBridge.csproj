@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+
+    <Version>1.0.0</Version>
+    <PackageId>WebViewHostBridge</PackageId>
+    <Authors>Serhii Khrolenko</Authors>
+    <Description>Zero-dependency contracts between a desktop shell (WinForms/WPF hosting WebView2 or CefSharp) and the web app it renders: open host windows from the page, ask the page about unsaved changes before the host closes, detect the embedded host by user agent.</Description>
+    <PackageTags>webview2;cefsharp;winforms;wpf;blazor;hybrid;host;bridge;interop</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

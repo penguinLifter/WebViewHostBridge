@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/WebViewHostBridge/WebViewHostBridge.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/WebViewHostBridge.Tests/WebViewHostBridge.Tests.csproj" />
+  </Folder>
+</Solution>
