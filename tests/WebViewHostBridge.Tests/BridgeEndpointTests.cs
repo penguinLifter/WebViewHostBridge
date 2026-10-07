@@ -64,15 +64,100 @@ public class BridgeEndpointTests
     }
 
     [Fact]
-    public async Task Request_HandlerThrows_RequesterGetsBridgeRequestException()
+    public async Task Request_HandlerThrowsBridgeException_RequesterGetsItsMessage()
     {
         var (host, page) = Pair();
-        host.On("save", (_, _) => throw new InvalidOperationException("Validation failed"));
+        host.On("save", (_, _) => throw new BridgeException("Validation failed"));
 
         var ex = await Assert.ThrowsAsync<BridgeRequestException>(() => page.RequestAsync<object>("save"));
 
         Assert.Equal("save", ex.Type);
         Assert.Equal("Validation failed", ex.Error);
+    }
+
+    [Fact]
+    public async Task Request_HandlerThrowsOther_RequesterGetsGenericError_HostGetsReceiveFailed()
+    {
+        var (host, page) = Pair();
+        var failures = new List<BridgeReceiveFailedEventArgs>();
+        host.ReceiveFailed += (_, e) => failures.Add(e);
+        host.On("save", (_, _) => throw new InvalidOperationException("ORA-00942: table or view does not exist"));
+
+        var ex = await Assert.ThrowsAsync<BridgeRequestException>(() => page.RequestAsync<object>("save"));
+
+        Assert.Equal("Request 'save' failed.", ex.Error);
+        Assert.DoesNotContain("ORA-", ex.Error);
+        var failure = Assert.Single(failures);
+        Assert.Equal("save", failure.Message.Type);
+        Assert.IsType<InvalidOperationException>(failure.Exception);
+    }
+
+    private sealed class VerboseEndpoint : BridgeEndpoint
+    {
+        public string? Sent { get; private set; }
+
+        protected override Task SendAsync(string json, CancellationToken ct)
+        {
+            Sent = json;
+            return Task.CompletedTask;
+        }
+
+        protected override string FormatError(BridgeMessage request, Exception exception) => exception.Message;
+    }
+
+    [Fact]
+    public async Task FormatError_CanBeOverridden()
+    {
+        var endpoint = new VerboseEndpoint();
+        endpoint.On("save", (_, _) => throw new InvalidOperationException("details"));
+
+        await endpoint.ReceiveAsync(BridgeProtocol.Serialize(BridgeProtocol.Request("save")));
+
+        Assert.Equal("details", BridgeProtocol.TryParse(endpoint.Sent)?.Error);
+    }
+
+    [Fact]
+    public async Task Notification_HandlerThrows_ReceiveDoesNotThrow_ReportsFailure()
+    {
+        var (host, page) = Pair();
+        Exception? reported = null;
+        host.ReceiveFailed += (_, e) => reported = e.Exception;
+        host.On("orderCompleted", (m, _) => Task.FromResult<object?>(m.PayloadAs<OrderCompleted>()));
+
+        await page.PostAsync("orderCompleted", "not an object");
+
+        Assert.IsAssignableFrom<System.Text.Json.JsonException>(reported);
+    }
+
+    [Fact]
+    public async Task Receive_ReplyCannotBeSent_DoesNotThrow_ReportsFailure()
+    {
+        var endpoint = new FailingSendEndpoint();
+        Exception? reported = null;
+        endpoint.ReceiveFailed += (_, e) => reported = e.Exception;
+        endpoint.On("ping", (_, _) => Task.FromResult<object?>("pong"));
+
+        Assert.True(await endpoint.ReceiveAsync(BridgeProtocol.Serialize(BridgeProtocol.Request("ping"))));
+        Assert.True(await endpoint.ReceiveAsync(BridgeProtocol.Serialize(BridgeProtocol.Request("unknown"))));
+
+        Assert.IsType<ObjectDisposedException>(reported);
+    }
+
+    [Fact]
+    public async Task ReceiveFailed_SubscriberThrows_IsSwallowed()
+    {
+        var (host, page) = Pair();
+        host.ReceiveFailed += (_, _) => throw new InvalidOperationException("logger is broken");
+        host.On("x", (_, _) => throw new InvalidOperationException());
+
+        await page.PostAsync("x");
+        await Assert.ThrowsAsync<BridgeRequestException>(() => page.RequestAsync<object>("x"));
+    }
+
+    private sealed class FailingSendEndpoint : BridgeEndpoint
+    {
+        protected override Task SendAsync(string json, CancellationToken ct) =>
+            throw new ObjectDisposedException("WebView2");
     }
 
     [Fact]

@@ -20,6 +20,12 @@ public abstract class BridgeEndpoint : IBridgeEndpoint, IDisposable
     /// <summary>How long <see cref="RequestAsync{TResponse}"/> waits for a reply.</summary>
     public TimeSpan RequestTimeout { get; init; } = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// An incoming message could not be fully processed: its handler threw, or the reply could not be sent.
+    /// <see cref="ReceiveAsync"/> never throws for these, so this is the place to log them.
+    /// </summary>
+    public event EventHandler<BridgeReceiveFailedEventArgs>? ReceiveFailed;
+
     /// <summary>Delivers a serialized message to the other side.</summary>
     protected abstract Task SendAsync(string json, CancellationToken ct);
 
@@ -39,6 +45,8 @@ public abstract class BridgeEndpoint : IBridgeEndpoint, IDisposable
         _pending[request.Id!] = reply;
         try
         {
+            // Dispose may have run between the first check and the registration — the request would hang otherwise.
+            ThrowIfDisposed();
             await SendMessageAsync(request, ct).ConfigureAwait(false);
             BridgeMessage answer;
             try
@@ -75,6 +83,8 @@ public abstract class BridgeEndpoint : IBridgeEndpoint, IDisposable
     /// (not a bridge message, or a notification without a handler) — the transport may handle it itself,
     /// e.g. legacy 1.0 <c>openForm</c> messages. Requests without a handler get an error reply.
     /// The host should verify the message origin before calling this.
+    /// <para>Never throws for a failing handler or reply — those go to <see cref="ReceiveFailed"/>, so it is
+    /// safe to await from an <c>async void</c> event handler such as WebView2 <c>WebMessageReceived</c>.</para>
     /// </summary>
     public async Task<bool> ReceiveAsync(string json, CancellationToken ct = default)
     {
@@ -95,13 +105,20 @@ public abstract class BridgeEndpoint : IBridgeEndpoint, IDisposable
         {
             if (!message.IsRequest)
                 return false;
-            await SendMessageAsync(BridgeProtocol.Failure(message, $"No handler for '{message.Type}'."), ct).ConfigureAwait(false);
+            await TrySendReplyAsync(message, BridgeProtocol.Failure(message, $"No handler for '{message.Type}'."), ct).ConfigureAwait(false);
             return true;
         }
 
         if (!message.IsRequest)
         {
-            await handler(message, ct).ConfigureAwait(false);
+            try
+            {
+                await handler(message, ct).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                OnReceiveFailed(message, ex);
+            }
             return true;
         }
 
@@ -112,11 +129,19 @@ public abstract class BridgeEndpoint : IBridgeEndpoint, IDisposable
         }
         catch (Exception ex)
         {
-            answer = BridgeProtocol.Failure(message, ex.Message);
+            OnReceiveFailed(message, ex);
+            answer = BridgeProtocol.Failure(message, FormatError(message, ex));
         }
-        await SendMessageAsync(answer, ct).ConfigureAwait(false);
+        await TrySendReplyAsync(message, answer, ct).ConfigureAwait(false);
         return true;
     }
+
+    /// <summary>
+    /// Text of the error reply when a request handler throws. By default only a <see cref="BridgeException"/>
+    /// passes its message through; anything else becomes a generic failure, because the other side is untrusted.
+    /// </summary>
+    protected virtual string FormatError(BridgeMessage request, Exception exception) =>
+        exception is BridgeException ? exception.Message : $"Request '{request.Type}' failed.";
 
     /// <summary>Fails pending requests and drops handlers.</summary>
     public void Dispose()
@@ -139,6 +164,30 @@ public abstract class BridgeEndpoint : IBridgeEndpoint, IDisposable
 
     private Task SendMessageAsync(BridgeMessage message, CancellationToken ct) =>
         SendAsync(BridgeProtocol.Serialize(message), ct);
+
+    private async Task TrySendReplyAsync(BridgeMessage request, BridgeMessage answer, CancellationToken ct)
+    {
+        try
+        {
+            await SendMessageAsync(answer, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            OnReceiveFailed(request, ex);
+        }
+    }
+
+    private void OnReceiveFailed(BridgeMessage message, Exception exception)
+    {
+        try
+        {
+            ReceiveFailed?.Invoke(this, new BridgeReceiveFailedEventArgs(message, exception));
+        }
+        catch
+        {
+            // A faulty subscriber must not break the transport.
+        }
+    }
 
     private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, this);
 

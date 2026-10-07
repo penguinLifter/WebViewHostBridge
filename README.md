@@ -41,6 +41,10 @@ await bridge.PostAsync("orderCompleted", new OrderResult(orderId, codes));
 
 - A handler's return value becomes the reply; a thrown exception becomes an error reply, raised on the
   requesting side as `BridgeRequestException`. A request without a handler fails fast instead of timing out.
+- Only a `BridgeException` sends its message to the other side — any other exception becomes a generic
+  `Request '<type>' failed.`, so internals do not leak to the page. Override `FormatError` to change that.
+- `ReceiveAsync` never throws for a failing handler or reply; those are raised as `ReceiveFailed` —
+  subscribe to log them.
 - No reply within `RequestTimeout` (default 30 s) → `TimeoutException`.
 - Wire format: `{ "type", "payload", "id", "replyTo", "error" }`, camelCase JSON (`BridgeProtocol`).
 

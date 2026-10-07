@@ -18,19 +18,9 @@ public interface IBridgeEndpoint
 
     /// <summary>
     /// Handles incoming messages of <paramref name="type"/>. For requests the returned value is sent back
-    /// as the reply payload; a thrown exception becomes an error reply. One handler per type — a new
+    /// as the reply payload; a thrown exception becomes an error reply (its text only for
+    /// <see cref="BridgeException"/>, a generic one otherwise). One handler per type — a new
     /// registration replaces the previous one. Dispose the result to unregister.
     /// </summary>
     IDisposable On(string type, Func<BridgeMessage, CancellationToken, Task<object?>> handler);
-}
-
-/// <summary>The other side answered a request with an error.</summary>
-public sealed class BridgeRequestException(string type, string error)
-    : Exception($"Bridge request '{type}' failed: {error}")
-{
-    /// <summary>Type of the failed request.</summary>
-    public string Type { get; } = type;
-
-    /// <summary>Error reported by the other side.</summary>
-    public string Error { get; } = error;
 }

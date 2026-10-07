@@ -8,7 +8,7 @@
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
 
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <PackageId>WebViewHostBridge</PackageId>
     <Authors>Serhii Khrolenko</Authors>
     <Description>Zero-dependency two-way bridge between a desktop shell (WinForms/WPF hosting WebView2 or CefSharp) and the web app it renders: typed request/reply and notifications in both directions, opening host windows from the page, unsaved-changes guard before the host closes, host detection by user agent.</Description>
