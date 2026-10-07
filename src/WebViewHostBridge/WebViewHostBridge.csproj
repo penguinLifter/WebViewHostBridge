@@ -8,13 +8,18 @@
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
 
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <PackageId>WebViewHostBridge</PackageId>
     <Authors>Serhii Khrolenko</Authors>
-    <Description>Zero-dependency contracts between a desktop shell (WinForms/WPF hosting WebView2 or CefSharp) and the web app it renders: open host windows from the page, ask the page about unsaved changes before the host closes, detect the embedded host by user agent.</Description>
+    <Description>Zero-dependency two-way bridge between a desktop shell (WinForms/WPF hosting WebView2 or CefSharp) and the web app it renders: typed request/reply and notifications in both directions, opening host windows from the page, unsaved-changes guard before the host closes, host detection by user agent.</Description>
     <PackageTags>webview2;cefsharp;winforms;wpf;blazor;hybrid;host;bridge;interop</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/penguinLifter/WebViewHostBridge</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/penguinLifter/WebViewHostBridge</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>

@@ -3,7 +3,7 @@ namespace WebViewHostBridge;
 /// <summary>
 /// Opens host (desktop) windows from the embedded web page.
 /// Implemented on the web side as a bridge to the host (e.g. <c>chrome.webview.postMessage</c>)
-/// and handled by the host, which maps <paramref name="formName"/> to its own window.
+/// and handled by the host, which maps the form name to its own window.
 /// </summary>
 public interface IFormOpener
 {
