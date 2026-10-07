@@ -22,6 +22,8 @@ jobs:
 
       - run: dotnet test -c Release
 
+      - run: node tests/js/webviewhostbridge.test.mjs
+
       - run: dotnet pack src/WebViewHostBridge/WebViewHostBridge.csproj -c Release -o artifacts -p:Version=$VERSION
 
       - name: NuGet login (OIDC -> temporary API key)

@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.2.0
+
+### Added
+- Connection handshake: `AnnounceAsync`, `IsConnected`, `WhenConnectedAsync`, `Connected`, `ResetConnection`;
+  `AwaitConnection` makes `PostAsync` / `RequestAsync` wait for the other side instead of sending into the void.
+  A reloaded page is detected as a new session and requests pending on the old one fail at once.
+- `BridgeCloseGuard` — `IHostCloseGuard` over the bridge (`hasUnsavedChanges` / `requestSave` requests).
+- `BridgeFormOpener` and `OpenFormRequest` — `IFormOpener` over the bridge; the host side also reads flat 1.0 messages.
+- Typed handlers: `OnNotification<TPayload>`, `OnRequest<TRequest, TResponse>`, `OnRequest<TResponse>`.
+- JS client `window.WebViewHostBridge` embedded as `BridgeScript.Source`: `create()` for plain JS pages,
+  `forward()` / `send()` for Blazor.
+- `BridgeMessage.ExtensionData` — fields outside the wire format (e.g. of flat 1.0 messages).
+- `ReceiveAsync` / `BridgeProtocol.TryParse` accept a message wrapped in a JSON string, so a WebView2 host can
+  always pass `WebMessageAsJson`.
+
+### Changed
+- Message types starting with `$bridge.` are reserved: `On`, `PostAsync` and `RequestAsync` reject them.
+
 ## 1.1.1
 
 ### Fixed

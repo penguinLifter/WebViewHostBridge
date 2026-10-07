@@ -29,6 +29,13 @@ public sealed record BridgeMessage
     /// <summary>Set on failed replies: why the request could not be handled.</summary>
     public string? Error { get; init; }
 
+    /// <summary>
+    /// Fields outside the wire format — e.g. <c>formName</c> / <c>parameters</c> of a flat 1.0 <c>openForm</c>
+    /// message. Null when there are none.
+    /// </summary>
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; init; }
+
     /// <summary>True for a request that expects a reply.</summary>
     [JsonIgnore]
     public bool IsRequest => Id is not null && ReplyTo is null;
